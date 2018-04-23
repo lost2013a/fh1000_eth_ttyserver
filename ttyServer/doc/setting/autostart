@@ -1,0 +1,19 @@
+#!/bin/sh
+ifconfig eth0 down
+ifconfig eth0 hw ether 001710220901
+ifconfig eth0 up
+ifconfig eth1 down 
+ifconfig eth1 hw ether 001710220902
+ifconfig eth1 up
+ifconfig eth0 192.168.3.10 netmask 255.255.255.0
+route add -host 14.10.20.70 gw 14.113.27.222 dev eth0
+ifconfig eth1 192.168.2.10 netmask 255.255.255.0
+route add -host 10.14.1.14 gw 10.14.38.54 dev eth1
+# ttyAM-->ttyS, stardand the sereal names.
+ln -s /dev/ttyAM1 /dev/ttyS1
+cd /mnt/nor/server
+#./dog_gpscommshell.sh &
+./monitor /mnt/nor/server gpscomshell 1 &
+./monitor /mnt/nor/server ttyServer 1 &
+cd  /mnt/nor/install/sbin
+./monitor  /mnt/nor/install/sbin ntpd on &
