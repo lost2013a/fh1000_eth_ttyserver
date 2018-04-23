@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="GBK" ?>
+<systemInfo systename="fh1000" circle_time="4" maxHostNum="5" fReserve="0" logLevel="1" listport="2406" isendhost="1" isetTime="1">
+    <ttyInfo ttyName="ttyS" enabeld="1" comId="2" baudrate="9600" parity="0" databits="8" stopbits="1"/>
+    <hostList>
+        <hostInfo hostId="1" enabeld="1" hostName="nari_ts" hostIp="192.168.1.60"/>
+    </hostList>
+</systemInfo>

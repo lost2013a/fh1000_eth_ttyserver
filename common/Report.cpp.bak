@@ -1,0 +1,219 @@
+#include "Report.h"
+#include <QString>
+#include <QDateTime>
+//#include <qDebug>
+
+
+
+unsigned long report_mktime(const unsigned int year0, const unsigned int mon0,
+       const unsigned int day, const unsigned int hour,
+       const unsigned int min, const unsigned int sec)
+{
+ 	unsigned int mon = mon0, year = year0;
+
+ 	/* 1..12 -> 11,12,1..10 */
+ 	if (0 >= (int) (mon -= 2)) 
+	{
+  	mon += 12; /* Puts Feb last since it has leap day */
+  	year -= 1;
+ 	}
+
+ 	return ((((unsigned long)(year/4 - year/100 + year/400 + 367*mon/12 + day) +year*365 - 719499)*24 + hour /* now have hours */)*60 + min /* now have minutes */)*60 +sec;/*finallyseconds */
+}
+quint64 report_gettime64()
+{
+	
+	quint64 tmpt = 0;
+	//取得当前的时间
+	 QDateTime t = QDateTime::currentDateTime(); 
+
+	 quint32 mec = report_mktime(t.date().year(),t.date().month(),t.date().day(),t.time().hour(),t.time().minute(),t.time().second());
+	 mec = mec  +  REPORT_1900TIME;
+	 
+	 quint32 mmsec = t.time().msec() * 1000000; 
+	 return  (((quint64)mec) << 32) + mmsec;
+
+}
+void  report_int64tostrtime(quint64  t)
+{
+       
+	quint32 sec = t >> 32; //得到秒
+	quint32 msec = (t & 0x0000FFFFFFFF);
+
+	float fval = ((msec * 1.0f)/4294967925L) * 1000L + 0.5f; 
+
+	quint32 tmpsec = (quint16)(fval);
+	
+	printf("printf sec = %u\n", sec);
+	sec = sec - REPORT_1900TIME;
+	
+	QDateTime dt;
+	dt.setTime_t(sec);
+	QDateTime tmpt = dt.toLocalTime(); 
+
+	printf(" czy = %04d-%02d-%02d %02d:%02d:%02d.%03d\n", tmpt.date().year(),tmpt.date().month(),tmpt.date().day(),
+		                            tmpt.time().hour(),tmpt.time().minute(),tmpt.time().second(), tmpsec);
+	  
+
+
+
+
+}
+
+CReport::CReport(void)
+{
+	 
+}
+
+CReport::~CReport(void)
+{
+	
+}
+int CReport::ShowDataFrm(void * buf, int len ,const char * from , const char *to,  bool dec)
+{
+  QDateTime t = QDateTime::currentDateTime ();
+  QString strTmp = t.toString ("yyyy-MM-dd hh:mm:ss.zzz");
+  qDebug("%s\n", strTmp.toAscii().data ());
+  
+  strTmp ="";
+
+  qDebug("%s --> %s  %s %d bytes \n", from, to,dec?"Send >> ":"Recive << ",len);
+  unsigned char *p = (unsigned char*)buf;
+  //len =  len > 32?32:len;
+  for (int i = 0; i < len; i++)
+  {
+	  if ((i + 1) % 8 == 0)
+	  {
+		    strTmp += report[p[i]] + QString("  ");
+	  }
+	  else
+	  {
+		   strTmp += report[p[i]] + QString(" ");
+	  }
+	 if ((i + 1) % 32 == 0 )
+	 {
+		 strTmp += "\n";
+	 }
+   }
+   if ((len) % 32 != 0)
+   {
+	   strTmp += "\n";
+   }
+   strTmp += "\n";
+   qDebug("%s", strTmp.toAscii().data ());
+   return 0;
+} 
+
+QString CReport::GetShowReport(void * buf, int len ,const char * from , const char *to,  bool dec)
+{
+  QDateTime t = QDateTime::currentDateTime ();
+  QString strTmp = t.toString ("yyyy-MM-dd hh:mm:ss.zzz");
+  strTmp += "\n";
+  strTmp += QString(from) + QString("-->") + QString(to) + QString("  ");
+  strTmp += dec? "Send >> ":"Recive << ";
+  QString strlen = QString("%1 bytes \n").arg(len);
+  strTmp += strlen;
+
+  unsigned char *p = (unsigned char*)buf;
+  //len =  len > 32?32:len;
+  for (int i = 0; i < len; i++)
+  {
+
+	  if ((i + 1) % 8 == 0)
+	  {
+		    strTmp += report[p[i]] + QString("  ");
+	  }
+	  else
+	  {
+		   strTmp += report[p[i]] + QString(" ");
+	  }
+	 if ((i + 1) % 32 == 0 )
+	 {
+		 strTmp += "\n";
+	 }
+   }
+   if ((len) % 32 != 0)
+   {
+	   strTmp += "\n";
+   }
+   strTmp += "\n";
+   return strTmp;
+
+}
+void CSafeMsgDeque::Clear()
+{
+	 m_ComMutex.lock ();
+     while(m_List.size ())
+	 {
+		FRAME *pFrme =  m_List.front ();
+		m_List.pop_front ();
+		delete pFrme;
+	 }
+ 	 m_ComMutex.unlock ();
+	
+}
+bool CSafeMsgDeque::PushBack(unsigned char *pMsgBuffer,unsigned short uiMsgSize)
+{
+	FRAME * pFrame = new FRAME(pMsgBuffer, uiMsgSize);
+	m_ComMutex.lock ();
+	m_List.append (pFrame);
+	m_ComMutex.unlock ();
+	return true;
+}
+
+int  CSafeMsgDeque::Size()
+{
+    int nCount = 0;
+	m_ComMutex.lock ();
+	nCount  = m_List.size ();
+	m_ComMutex.unlock ();
+	return nCount;
+}
+
+int CSafeMsgDeque::PopFront(unsigned char *pMsgBuffer,int bufflen, unsigned short & uiMsgSize)
+{
+	uiMsgSize = 0;
+	m_ComMutex.lock (); //yhc
+	if (m_List.size () > 0)
+	{
+		
+		FRAME *pFrme =  m_List.front ();
+		m_List.pop_front ();
+		m_ComMutex.unlock ();
+		if (bufflen >= pFrme->DataLen)
+		{
+			memcpy(pMsgBuffer,pFrme->pData, pFrme->DataLen); 
+			uiMsgSize = pFrme->DataLen;
+			delete pFrme;
+			return 1L;
+		}
+		else
+		{
+			delete pFrme;
+			
+		}
+	}
+	else
+	{
+		m_ComMutex.unlock ();
+	}
+    return 0L;
+}
+
+
+bool CSafeMsgDeque::PopFront(int wCount)
+{
+	m_ComMutex.lock ();
+    for (int i = 0; i < wCount; i++)
+	{
+		if (m_List.size () > 0)
+		{
+			FRAME *pFrme =  m_List.front ();
+		    m_List.pop_front ();
+			delete pFrme;
+		
+		}
+	}
+	m_ComMutex.unlock ();
+	return m_List.size () > 0;
+}

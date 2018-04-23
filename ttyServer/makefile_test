@@ -1,0 +1,55 @@
+# 府河FH1000串口转可为私有协议
+#
+VPATH = -I ./ \
+          
+Objects =  main_test.o CComPort.o
+
+LIBS = 
+
+LINK =  -fPIC -lpthread -lz -ldl -lm -lrt -lnsl
+																															
+CFLAGS = -O2 -w -DOS_LINUX -fvisibility=hidden
+
+LFLAGS  = 
+
+CC =  arm-linux-g++
+
+VERSION=1.1.0
+
+TARGET        = ../bin/ttyTest-${VERSION}
+TARGET0       = ttyTest
+
+$(TARGET) : $(Objects) mklibdir
+	$(CC) $(LFLAGS) $(LINK) -o $(TARGET) $(Objects)  $(LIBS) $(CFLAGS) $(VPATH) 
+#	-ln -s $(TARGET) $(TARGET0)
+#	mv -f $(TARGET) $(TARGET0) ../bin/
+	
+
+main_test.o : main_test.cpp
+	 $(CC) -o main_test.o $(LIBS) $(CFLAGS) $(VPATH) \
+	     -c main_test.cpp	   
+	     
+CComPort.o : CComPort.cpp
+	 $(CC) -o CComPort.o $(LIBS) $(CFLAGS) $(VPATH) \
+	     -c CComPort.cpp	   
+
+	     	     	     	     	     	      	     	     	          	     	     	     	     	     	     	     	     	     	     
+mklibdir:
+	if [ -d ../bin/ ]; then echo "../bin/ exists";   else mkdir -p ../bin/; fi
+
+.PHONY : install
+install:
+	@echo nothing done
+
+.PHONY : print
+print:
+	@echo nothing done
+
+.PHONY : tar
+tar:
+	@echo nothing done
+
+.PHONY : clean
+
+clean :
+	-rm *.o $(TARGET) $(TARGET0) $(Objects)
